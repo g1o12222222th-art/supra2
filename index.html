@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>სუფრა</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#16130f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;600;700&family=Noto+Serif+Georgian:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #ece2cb;
+    --ink: #1f1a13;
+    --muted: #655a47;
+    --ochre: #d9a441;
+    --cream: #f3ead3;
+    --red: #b3261e;
+    --oil: #16130f;
+    --serif: "Noto Serif Georgian", "Sylfaen", "Noto Sans Georgian", serif;
+    --sans: "Noto Sans Georgian", "Sylfaen", system-ui, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0d0b09;
+      --ink: #efe6d0;
+      --muted: #a89c86;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0d0b09;
+    --ink: #efe6d0;
+    --muted: #a89c86;
+  }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    height: 100%;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .stage {
+    position: relative;
+    width: min(100%, 420px, calc((100vh - 96px) * 2 / 3));
+    aspect-ratio: 2 / 3;
+    background: var(--oil);
+    border: 3px solid var(--ochre);
+    border-radius: 6px;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  @supports (height: 100dvh) {
+    .stage { width: min(100%, 420px, calc((100dvh - 96px) * 2 / 3)); }
+  }
+  canvas#game { display: block; width: 100%; height: 100%; touch-action: none; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 22px 20px;
+    text-align: center;
+    background: rgba(15, 12, 9, 0.84);
+    color: var(--cream);
+  }
+  .overlay[hidden] { display: none !important; }
+  .overlay::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 1.5px solid rgba(217, 164, 65, 0.55);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  h1, h2 { font-family: var(--serif); font-weight: 800; color: var(--ochre); margin: 0; line-height: 1.1; }
+  h1 { font-size: clamp(44px, 15vw, 66px); letter-spacing: 0.01em; }
+  h2 { font-size: clamp(26px, 8vw, 34px); }
+  .lead { margin: 0; font-size: 14px; line-height: 1.6; max-width: 28ch; color: #e6dcc3; }
+  .legend {
+    list-style: none;
+    margin: 4px 0 2px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    text-align: left;
+  }
+  .legend li { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 1.25; }
+  .legend canvas { width: 40px; height: 40px; flex: none; }
+  .legend b { display: block; font-weight: 600; color: var(--cream); }
+  .legend span { color: #bfb497; font-size: 12px; }
+  .legend .bad span { color: #e9836f; }
+  .big { font-family: var(--serif); font-weight: 800; font-size: 64px; line-height: 1; color: var(--cream); margin: 2px 0; }
+  .sub { margin: 0; font-size: 14px; color: #d8cdb2; }
+  .record { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 16px; color: var(--ochre); }
+  .btn {
+    font: 700 16px var(--sans);
+    background: var(--ochre);
+    color: #1f1608;
+    border: 0;
+    border-radius: 6px;
+    padding: 13px 30px;
+    cursor: pointer;
+    margin-top: 6px;
+    min-height: 46px;
+  }
+  .btn:hover { background: #e6b458; }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible, .link:focus-visible { outline: 3px solid var(--cream); outline-offset: 3px; }
+  .foot {
+    width: min(100%, 420px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  .foot p { margin: 0; }
+  .link {
+    font: 600 13px var(--sans);
+    color: var(--ink);
+    background: transparent;
+    border: 1.5px solid var(--muted);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    flex: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <canvas id="game" aria-label="თამაშის ველი"></canvas>
+
+  <div class="overlay" id="menu">
+    <h1>სუფრა</h1>
+    <p class="lead">დაიჭირე ლანგარზე ყველაფერი, რაც სუფრას ამშვენებს. წიწაკას მოერიდე.</p>
+    <ul class="legend">
+      <li><canvas data-t="khinkali" width="80" height="80"></canvas><div><b>ხინკალი</b><span>+1 ქულა</span></div></li>
+      <li><canvas data-t="khachapuri" width="80" height="80"></canvas><div><b>ხაჭაპური</b><span>+3 ქულა</span></div></li>
+      <li><canvas data-t="wine" width="80" height="80"></canvas><div><b>ღვინო</b><span>+5 ქულა</span></div></li>
+      <li class="bad"><canvas data-t="chili" width="80" height="80"></canvas><div><b>წიწაკა</b><span>−1 გული</span></div></li>
+    </ul>
+    <button class="btn" id="startBtn" type="button">თამაშის დაწყება</button>
+  </div>
+
+  <div class="overlay" id="over" hidden>
+    <h2>სუფრა დასრულდა</h2>
+    <div class="big" id="finalScore">0</div>
+    <p class="sub">შენი ქულა</p>
+    <p class="record" id="recordLine"></p>
+    <button class="btn" id="againBtn" type="button">თავიდან თამაში</button>
+  </div>
+</div>
+
+<div class="foot">
+  <p>გადაათრიე ლანგარი თითით ან მაუსით. კლავიატურაზე გამოიყენე ← და →.</p>
+  <button class="link" id="muteBtn" type="button" aria-pressed="false">ხმა: ჩართულია</button>
+</div>
+
+<script>
+(() => {
+  const W = 360, H = 540;
+  const PW = 96;               // plate width
+  const PY = H - 62;           // plate top
+  const TABLE_Y = H - 44;      // tablecloth top
+  const cv = document.getElementById('game');
+  const ctx = cv.getContext('2d');
+  const stage = document.getElementById('stage');
+  const menu = document.getElementById('menu');
+  const over = document.getElementById('over');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- item types ---------- */
+  const TYPES = {
+    khinkali:   { w: 55, pts: 1, r: 19, good: true },
+    khachapuri: { w: 22, pts: 3, r: 22, good: true },
+    wine:       { w: 10, pts: 5, r: 18, good: true, bonus: true },
+    chili:      { w: 16, pts: 0, r: 16, good: false }
+  };
+
+  /* ---------- state ---------- */
+  const S = {
+    mode: 'menu', score: 0, lives: 5, level: 1,
+    items: [], parts: [], floats: [], banner: null,
+    px: W / 2, tx: W / 2, spawn: 0.4, shake: 0, best: 0, overAt: 0
+  };
+  const keys = { left: false, right: false };
+  try { S.best = parseInt(localStorage.getItem('supra-best') || '0', 10) || 0; } catch (e) {}
+
+  /* ---------- helpers ---------- */
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function rr(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+  function heart(c, x, y, s, fill, stroke) {
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.beginPath();
+    c.moveTo(0, 4);
+    c.bezierCurveTo(-9, -2, -6, -9, 0, -5);
+    c.bezierCurveTo(6, -9, 9, -2, 0, 4);
+    c.closePath();
+    c.fillStyle = fill; c.fill();
+    if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1; c.stroke(); }
+    c.restore();
+  }
+
+  /* ---------- audio ---------- */
+  let AC = null, muted = false;
+  function ensureAudio() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (AC && AC.state === 'suspended') AC.resume();
+  }
+  function tone(f, d, type, v, slide, delay) {
+    if (muted || !AC) return;
+    const t0 = AC.currentTime + (delay || 0);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t0 + d);
+    g.gain.setValueAtTime(v || 0.05, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + d + 0.02);
+  }
+  const sfx = {
+    khinkali()   { tone(520, 0.09, 'triangle', 0.06); },
+    khachapuri() { tone(620, 0.09, 'triangle', 0.06); tone(780, 0.1, 'triangle', 0.06, 0, 0.07); },
+    wine()       { tone(660, 0.1, 'sine', 0.06); tone(880, 0.1, 'sine', 0.06, 0, 0.08); tone(1100, 0.16, 'sine', 0.06, 0, 0.16); },
+    chili()      { tone(200, 0.28, 'sawtooth', 0.06, -110); },
+    miss()       { tone(240, 0.2, 'square', 0.03, -90); },
+    level()      { tone(523, 0.12, 'triangle', 0.06); tone(659, 0.12, 'triangle', 0.06, 0, 0.1); tone(784, 0.2, 'triangle', 0.06, 0, 0.2); },
+    end()        { tone(400, 0.25, 'triangle', 0.06, -120); tone(300, 0.3, 'triangle', 0.06, -120, 0.22); tone(200, 0.45, 'triangle', 0.06, -80, 0.46); }
+  };
+
+  /* ---------- drawing: items ---------- */
+  function drawItem(c, t, x, y, rot, s) {
+    c.save();
+    c.translate(x, y); c.rotate(rot || 0); c.scale(s || 1, s || 1);
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    if (t === 'khinkali') {
+      c.fillStyle = '#f4ecd6'; c.strokeStyle = '#7d6c48'; c.lineWidth = 1.6;
+      c.beginPath(); c.ellipse(0, 4, 17, 14, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.strokeStyle = 'rgba(125,108,72,.6)'; c.lineWidth = 1;
+      c.beginPath();
+      for (let i = -4; i <= 4; i++) { c.moveTo(0, -10); c.lineTo(i * 3.8, -2 + Math.abs(i) * 0.6); }
+      c.stroke();
+      c.fillStyle = '#f4ecd6'; c.strokeStyle = '#7d6c48'; c.lineWidth = 1.6;
+      c.beginPath(); c.arc(0, -13, 4, 0, Math.PI * 2); c.fill(); c.stroke();
+    } else if (t === 'khachapuri') {
+      c.fillStyle = '#d69a35'; c.strokeStyle = '#7a4b12'; c.lineWidth = 1.8;
+      c.beginPath(); c.moveTo(-24, 0); c.quadraticCurveTo(0, -19, 24, 0); c.quadraticCurveTo(0, 19, -24, 0); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#f6d574';
+      c.beginPath(); c.ellipse(0, 0, 14, 6.5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff7e2';
+      c.beginPath(); c.ellipse(0, 0, 9.5, 4.6, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#e9781c';
+      c.beginPath(); c.arc(1, 0, 3.6, 0, Math.PI * 2); c.fill();
+    } else if (t === 'wine') {
+      c.save();
+      c.shadowColor = 'rgba(217,164,65,.9)'; c.shadowBlur = 10;
+      c.fillStyle = '#8a1533'; c.strokeStyle = '#e8d7a8'; c.lineWidth = 1.6;
+      c.beginPath();
+      c.moveTo(-10, -16); c.lineTo(10, -16);
+      c.quadraticCurveTo(13, 1, 0, 3);
+      c.quadraticCurveTo(-13, 1, -10, -16);
+      c.closePath(); c.fill(); c.stroke();
+      c.restore();
+      c.strokeStyle = '#e8d7a8'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(0, 3); c.lineTo(0, 14); c.moveTo(-8, 15); c.lineTo(8, 15); c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(-6, -12); c.lineTo(-6, -5); c.stroke();
+    } else if (t === 'chili') {
+      c.fillStyle = '#d1261b'; c.strokeStyle = '#6e0f0a'; c.lineWidth = 1.6;
+      c.beginPath();
+      c.moveTo(-6, -12);
+      c.quadraticCurveTo(15, -10, 10, 10);
+      c.quadraticCurveTo(6, 19, -2, 16);
+      c.quadraticCurveTo(8, 4, -6, -6);
+      c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = '#4b7a3a'; c.lineWidth = 3.2;
+      c.beginPath(); c.moveTo(-6, -10); c.lineTo(-11, -16); c.stroke();
+    }
+    c.restore();
+  }
+
+  /* legend icons */
+  document.querySelectorAll('.legend canvas').forEach(cn => {
+    const c = cn.getContext('2d');
+    c.scale(2, 2);
+    drawItem(c, cn.dataset.t, 20, 21, 0, 1);
+  });
+
+  /* ---------- drawing: scene ---------- */
+  const dots = Array.from({ length: 46 }, () => ({ x: rand(0, W), y: rand(0, H - 120), r: rand(0.6, 1.8), a: rand(0.04, 0.12) }));
+
+  function drawBg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1d1812'); g.addColorStop(1, '#0f0c09');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#f3ead3';
+    dots.forEach(d => { ctx.globalAlpha = d.a; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    // Caucasus silhouette
+    ctx.fillStyle = '#261d14';
+    ctx.beginPath();
+    ctx.moveTo(0, TABLE_Y);
+    [[0, H - 100], [50, H - 150], [85, H - 122], [140, H - 196], [200, H - 128], [252, H - 168], [312, H - 116], [360, H - 152], [360, TABLE_Y]]
+      .forEach(p => ctx.lineTo(p[0], p[1]));
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4a3c2b';
+    ctx.beginPath(); ctx.moveTo(140, H - 196); ctx.lineTo(128, H - 174); ctx.lineTo(139, H - 179); ctx.lineTo(148, H - 172); ctx.lineTo(156, H - 178); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(252, H - 168); ctx.lineTo(243, H - 150); ctx.lineTo(252, H - 155); ctx.lineTo(262, H - 149); ctx.closePath(); ctx.fill();
+    // tablecloth
+    ctx.fillStyle = '#efe3c8'; ctx.fillRect(0, TABLE_Y, W, H - TABLE_Y);
+    ctx.fillStyle = '#b3261e';
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 17; c++) if ((r + c) % 2 === 0) ctx.fillRect(c * 22, TABLE_Y + r * 22, 22, 22);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, TABLE_Y, W, 2);
+  }
+
+  function drawPlate() {
+    const x = S.px, y = PY;
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath(); ctx.ellipse(x, y + 14, PW / 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6f4520'; rr(ctx, x - PW / 2, y, PW, 11, 5); ctx.fill();
+    ctx.fillStyle = '#b9854a'; rr(ctx, x - PW / 2, y - 3, PW, 7, 4); ctx.fill();
+    ctx.fillStyle = '#b3261e'; ctx.fillRect(x - PW / 2 + 12, y + 5, PW - 24, 2);
+  }
+
+  function drawHud() {
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#bfb497'; ctx.font = '600 11px "Noto Sans Georgian", sans-serif';
+    ctx.fillText('ქულა', 16, 24);
+    ctx.fillStyle = '#f3ead3'; ctx.font = '800 28px "Noto Serif Georgian", serif';
+    ctx.fillText(String(S.score), 16, 52);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#bfb497'; ctx.font = '600 11px "Noto Sans Georgian", sans-serif';
+    ctx.fillText('რეკორდი', W - 16, 24);
+    ctx.fillStyle = '#d9a441'; ctx.font = '800 20px "Noto Serif Georgian", serif';
+    ctx.fillText(String(Math.max(S.best, S.score)), W - 16, 48);
+    for (let i = 0; i < 5; i++) {
+      const full = i < S.lives;
+      heart(ctx, W - 22 - i * 20, 72, 1.15, full ? '#d1261b' : 'rgba(243,234,211,.12)', full ? '#6e0f0a' : null);
+    }
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#bfb497'; ctx.font = '600 12px "Noto Sans Georgian", sans-serif';
+    ctx.fillText('დონე ' + S.level, 16, 72);
+  }
+
+  function drawBanner() {
+    const b = S.banner; if (!b) return;
+    const a = b.t < 0.25 ? b.t / 0.25 : b.t > 1.3 ? Math.max(0, (1.6 - b.t) / 0.3) : 1;
+    ctx.save();
+    ctx.globalAlpha = a; ctx.textAlign = 'center';
+    ctx.fillStyle = '#d9a441'; ctx.font = '800 36px "Noto Serif Georgian", serif';
+    ctx.fillText(b.text, W / 2, 190);
+    ctx.fillStyle = '#f3ead3'; ctx.font = '600 14px "Noto Sans Georgian", sans-serif';
+    ctx.fillText('დონე ' + S.level, W / 2, 216);
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+    ctx.save();
+    if (S.shake > 0 && !reduceMotion) ctx.translate(rand(-1, 1) * S.shake, rand(-1, 1) * S.shake);
+    drawBg();
+    S.items.forEach(it => drawItem(ctx, it.t, it.x, it.y, it.rot, 1));
+    if (S.mode === 'play') drawPlate();
+    S.parts.forEach(p => {
+      ctx.globalAlpha = clamp(p.life * 2, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    S.floats.forEach(f => {
+      ctx.globalAlpha = clamp(f.life * 1.6, 0, 1);
+      ctx.fillStyle = f.color; ctx.textAlign = 'center';
+      ctx.font = '800 20px "Noto Serif Georgian", serif';
+      ctx.fillText(f.text, f.x, f.y);
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    if (S.mode === 'play') { drawHud(); drawBanner(); }
+  }
+
+  /* ---------- game logic ---------- */
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    cv.width = Math.max(1, Math.round(r.width * dpr));
+    cv.height = Math.max(1, Math.round(r.height * dpr));
+  }
+
+  function pickType() {
+    const chiliW = Math.min(30, TYPES.chili.w + S.level * 1.5);
+    const bag = [['khinkali', TYPES.khinkali.w], ['khachapuri', TYPES.khachapuri.w], ['wine', TYPES.wine.w], ['chili', chiliW]];
+    const total = bag.reduce((s, b) => s + b[1], 0);
+    let n = Math.random() * total;
+    for (const [t, w] of bag) { if ((n -= w) <= 0) return t; }
+    return 'khinkali';
+  }
+
+  function spawnItem(decor) {
+    const t = decor ? (Math.random() < 0.15 ? 'chili' : pickType()) : pickType();
+    const r = TYPES[t].r;
+    S.items.push({
+      t, x: rand(r + 8, W - r - 8), y: -r,
+      vy: decor ? rand(70, 110) : Math.min(430, 120 + S.level * 16 + rand(0, 40)),
+      rot: rand(-0.4, 0.4), vr: rand(-1.4, 1.4), decor: !!decor
+    });
+  }
+
+  function burst(x, y, color, n) {
+    for (let i = 0; i < n; i++) {
+      S.parts.push({ x, y, vx: rand(-90, 90), vy: rand(-140, -20), r: rand(1.5, 3.2), life: rand(0.4, 0.8), color });
+    }
+  }
+  function floatText(x, y, text, color) { S.floats.push({ x, y, text, color, life: 0.9 }); }
+
+  function updateFx(dt) {
+    S.parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 420 * dt; p.life -= dt; });
+    S.parts = S.parts.filter(p => p.life > 0);
+    S.floats.forEach(f => { f.y -= 34 * dt; f.life -= dt; });
+    S.floats = S.floats.filter(f => f.life > 0);
+    S.shake = Math.max(0, S.shake - dt * 22);
+    if (S.banner) { S.banner.t += dt; if (S.banner.t > 1.6) S.banner = null; }
+  }
+
+  const TOASTS = ['გაუმარჯოს!', 'ვაშა!', 'ალავერდი!'];
+  let toastIdx = 0;
+
+  function loseLife(x, y) {
+    S.lives--;
+    floatText(x, y, '−1', '#e9836f');
+    if (S.lives <= 0) endGame();
+  }
+
+  function update(dt) {
+    const dir = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+    if (dir) S.tx += dir * 380 * dt;
+    S.tx = clamp(S.tx, PW / 2, W - PW / 2);
+    S.px += (S.tx - S.px) * Math.min(1, dt * 16);
+
+    S.spawn -= dt;
+    if (S.spawn <= 0) {
+      spawnItem(false);
+      S.spawn = Math.max(0.32, 0.95 - S.level * 0.055) * rand(0.75, 1.25);
+    }
+
+    for (let i = S.items.length - 1; i >= 0; i--) {
+      const it = S.items[i], ty = TYPES[it.t];
+      const prev = it.y;
+      it.y += it.vy * dt; it.rot += it.vr * dt;
+      const dx = Math.abs(it.x - S.px);
+      if (prev + ty.r * 0.6 <= PY && it.y + ty.r * 0.6 >= PY && dx <= PW / 2 + ty.r * 0.2) {
+        S.items.splice(i, 1);
+        if (ty.good) {
+          S.score += ty.pts;
+          floatText(it.x, PY - 14, '+' + ty.pts, it.t === 'wine' ? '#d9a441' : '#f3ead3');
+          burst(it.x, PY, it.t === 'wine' ? '#d9a441' : '#f3ead3', it.t === 'wine' ? 14 : 7);
+          sfx[it.t]();
+          const lvl = 1 + Math.floor(S.score / 20);
+          if (lvl > S.level) {
+            S.level = lvl;
+            S.banner = { text: TOASTS[toastIdx++ % TOASTS.length], t: 0 };
+            sfx.level();
+          }
+        } else {
+          S.shake = 7;
+          burst(it.x, PY, '#d1261b', 12);
+          sfx.chili();
+          loseLife(it.x, PY - 14);
+        }
+        if (S.mode !== 'play') return;
+      } else if (it.y + ty.r * 0.4 >= TABLE_Y) {
+        S.items.splice(i, 1);
+        if (ty.good && ty.pts < 5) {
+          burst(it.x, TABLE_Y, '#f3ead3', 6);
+          sfx.miss();
+          loseLife(it.x, TABLE_Y - 12);
+          if (S.mode !== 'play') return;
+        }
+      }
+    }
+    updateFx(dt);
+  }
+
+  function ambient(dt) {
+    S.spawn -= dt;
+    if (S.spawn <= 0) { spawnItem(true); S.spawn = rand(0.7, 1.2); }
+    for (let i = S.items.length - 1; i >= 0; i--) {
+      const it = S.items[i];
+      it.y += it.vy * dt; it.rot += it.vr * dt;
+      if (it.y > TABLE_Y) S.items.splice(i, 1);
+    }
+    updateFx(dt);
+  }
+
+  function startGame() {
+    ensureAudio();
+    Object.assign(S, { mode: 'play', score: 0, lives: 5, level: 1, items: [], parts: [], floats: [], banner: null, px: W / 2, tx: W / 2, spawn: 0.5, shake: 0 });
+    menu.hidden = true; over.hidden = true;
+  }
+
+  function endGame() {
+    S.mode = 'over';
+    S.overAt = performance.now();
+    let record = false;
+    if (S.score > S.best) {
+      S.best = S.score; record = true;
+      try { localStorage.setItem('supra-best', String(S.best)); } catch (e) {}
+    }
+    document.getElementById('finalScore').textContent = S.score;
+    document.getElementById('recordLine').textContent = record && S.score > 0 ? 'ახალი რეკორდი!' : 'რეკორდი: ' + S.best;
+    S.items = [];
+    sfx.end();
+    over.hidden = false;
+  }
+
+  /* ---------- input ---------- */
+  function pointerTo(e) {
+    if (S.mode !== 'play') return;
+    const r = cv.getBoundingClientRect();
+    S.tx = clamp((e.clientX - r.left) / r.width * W, PW / 2, W - PW / 2);
+  }
+  window.addEventListener('pointermove', pointerTo);
+  window.addEventListener('pointerdown', pointerTo);
+
+  window.addEventListener('keydown', e => {
+    const k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
+    else if ((k === 'Enter' || k === ' ') && S.mode !== 'play' && !(e.target && e.target.tagName === 'BUTTON')) {
+      if (S.mode === 'over' && performance.now() - S.overAt < 500) return;
+      e.preventDefault(); startGame();
+    }
+  });
+  window.addEventListener('keyup', e => {
+    const k = e.key;
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
+  });
+  window.addEventListener('blur', () => { keys.left = keys.right = false; });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', startGame);
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = muted ? 'ხმა: გამორთულია' : 'ხმა: ჩართულია';
+    muteBtn.setAttribute('aria-pressed', String(muted));
+    if (!muted) ensureAudio();
+  });
+
+  window.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  /* ---------- loop ---------- */
+  let last = 0;
+  function frame(ts) {
+    const dt = Math.min(0.05, (ts - last) / 1000 || 0);
+    last = ts;
+    if (S.mode === 'play') update(dt); else ambient(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }</script>
+</body>
+</html>
